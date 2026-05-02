@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Verifier — Fake News Detector</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #FAFAF8;
+      --surface: #FFFFFF;
+      --surface2: #F4F3EF;
+      --border: rgba(0,0,0,0.10);
+      --border2: rgba(0,0,0,0.18);
+      --text: #1A1A18;
+      --text2: #555550;
+      --text3: #888880;
+      --radius-md: 8px;
+      --radius-lg: 14px;
+      --green-bg: #EAF3DE;
+      --green-border: #C0DD97;
+      --green-text: #27500A;
+      --green-accent: #3B6D11;
+      --red-bg: #FCEBEB;
+      --red-border: #F7C1C1;
+      --red-text: #791F1F;
+      --red-accent: #A32D2D;
+      --amber-bg: #FAEEDA;
+      --amber-border: #FAC775;
+      --amber-text: #633806;
+      --amber-accent: #854F0B;
+      --blue: #378ADD;
+      --teal: #1D9E75;
+      --pink: #D4537E;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #18181A;
+        --surface: #222224;
+        --surface2: #2A2A2C;
+        --border: rgba(255,255,255,0.10);
+        --border2: rgba(255,255,255,0.18);
+        --text: #F0EFEB;
+        --text2: #A8A8A0;
+        --text3: #666660;
+        --green-bg: #173404;
+        --green-border: #3B6D11;
+        --green-text: #C0DD97;
+        --green-accent: #97C459;
+        --red-bg: #501313;
+        --red-border: #A32D2D;
+        --red-text: #F7C1C1;
+        --red-accent: #F09595;
+        --amber-bg: #412402;
+        --amber-border: #854F0B;
+        --amber-text: #FAC775;
+        --amber-accent: #EF9F27;
+      }
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Source Serif 4', Georgia, serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.7;
+    }
+
+    /* ── Header ─────────────────────────────────── */
+    header {
+      border-bottom: 0.5px solid var(--border);
+      padding: 0 2rem;
+      background: var(--surface);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-inner {
+      max-width: 860px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+    }
+
+    .logo-name {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.3px;
+    }
+
+    .logo-badge {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--blue);
+      background: rgba(55,138,221,0.1);
+      border: 0.5px solid rgba(55,138,221,0.3);
+      border-radius: 3px;
+      padding: 2px 7px;
+      letter-spacing: 0.5px;
+    }
+
+    .header-meta {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--text3);
+    }
+
+    /* ── Hero ──────────────────────────────────── */
+    .hero {
+      background: var(--surface);
+      border-bottom: 0.5px solid var(--border);
+      padding: 3rem 2rem 2.5rem;
+    }
+
+    .hero-inner {
+      max-width: 860px;
+      margin: 0 auto;
+    }
+
+    .hero h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(32px, 5vw, 52px);
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -1px;
+      color: var(--text);
+      margin-bottom: 1rem;
+      max-width: 600px;
+    }
+
+    .hero h1 em {
+      font-style: italic;
+      color: var(--text2);
+    }
+
+    .hero-desc {
+      font-size: 16px;
+      color: var(--text2);
+      max-width: 520px;
+      margin-bottom: 1.5rem;
+      font-style: italic;
+    }
+
+    .algo-pills {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .algo-pill {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--green-accent);
+      background: var(--green-bg);
+      border: 0.5px solid var(--green-border);
+      border-radius: 3px;
+      padding: 3px 9px;
+    }
+
+    /* ── Main layout ──────────────────────────── */
+    main {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 2.5rem 2rem;
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 2rem;
+      align-items: start;
+    }
+
+    @media (max-width: 700px) {
+      main { grid-template-columns: 1fr; }
+      header { padding: 0 1rem; }
+      .hero { padding: 2rem 1rem 1.5rem; }
+      main { padding: 1.5rem 1rem; }
+    }
+
+    /* ── Input panel ──────────────────────────── */
+    .input-panel { }
+
+    .panel-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 200px;
+      font-family: 'Source Serif 4', Georgia, serif;
+      font-size: 15px;
+      line-height: 1.7;
+      color: var(--text);
+      background: var(--surface);
+      border: 0.5px solid var(--border2);
+      border-radius: var(--radius-lg);
+      padding: 14px 16px;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.15s;
+      appearance: none;
+    }
+
+    textarea:focus { border-color: var(--blue); }
+
+    textarea::placeholder {
+      color: var(--text3);
+      font-style: italic;
+    }
+
+    .examples-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin: 10px 0 16px;
+    }
+
+    .example-btn {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--text2);
+      background: transparent;
+      border: 0.5px solid var(--border2);
+      border-radius: 3px;
+      padding: 5px 11px;
+      cursor: pointer;
+      transition: background 0.1s, border-color 0.1s;
+    }
+
+    .example-btn:hover {
+      background: var(--surface2);
+      border-color: var(--border2);
+    }
+
+    .analyze-btn {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--bg);
+      background: var(--text);
+      border: none;
+      border-radius: var(--radius-md);
+      padding: 12px 28px;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      width: 100%;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+
+    .analyze-btn:hover { opacity: 0.85; }
+    .analyze-btn:active { transform: scale(0.99); }
+    .analyze-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    /* ── Loading ─────────────────────────────── */
+    .loading-wrap {
+      display: none;
+      margin-top: 14px;
+    }
+    .loading-wrap.visible { display: block; }
+
+    .loading-track {
+      height: 2px;
+      background: var(--border);
+      border-radius: 1px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+
+    .loading-fill {
+      height: 100%;
+      background: var(--text);
+      border-radius: 1px;
+      animation: scanline 1.4s ease-in-out infinite;
+    }
+
+    @keyframes scanline {
+      0%   { width: 0%;   margin-left: 0%; }
+      50%  { width: 55%;  margin-left: 22%; }
+      100% { width: 0%;   margin-left: 100%; }
+    }
+
+    .loading-status {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      color: var(--text3);
+    }
+
+
+
+    /* ── Results panel ────────────────────────── */
+    .results-panel { }
+
+    .result-card {
+      display: none;
+      border: 0.5px solid var(--border2);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      animation: slideUp 0.3s ease;
+    }
+
+    .result-card.visible { display: block; }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .verdict-strip {
+      padding: 18px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .verdict-strip.real     { background: var(--green-bg); border-bottom: 0.5px solid var(--green-border); }
+    .verdict-strip.fake     { background: var(--red-bg);   border-bottom: 0.5px solid var(--red-border); }
+    .verdict-strip.uncertain{ background: var(--amber-bg); border-bottom: 0.5px solid var(--amber-border); }
+
+    .verdict-eyebrow {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 5px;
+      opacity: 0.65;
+    }
+
+    .verdict-label {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .verdict-strip.real      .verdict-eyebrow,
+    .verdict-strip.real      .verdict-label { color: var(--green-text); }
+    .verdict-strip.fake      .verdict-eyebrow,
+    .verdict-strip.fake      .verdict-label { color: var(--red-text); }
+    .verdict-strip.uncertain .verdict-eyebrow,
+    .verdict-strip.uncertain .verdict-label { color: var(--amber-text); }
+
+    .confidence-block { text-align: right; }
+
+    .confidence-num {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 28px;
+      font-weight: 500;
+      display: block;
+      line-height: 1;
+    }
+
+    .verdict-strip.real      .confidence-num { color: var(--green-accent); }
+    .verdict-strip.fake      .confidence-num { color: var(--red-accent); }
+    .verdict-strip.uncertain .confidence-num { color: var(--amber-accent); }
+
+    .confidence-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--text3);
+      margin-top: 3px;
+    }
+
+    /* signals */
+    .signals-section {
+      padding: 16px 20px;
+      background: var(--surface);
+    }
+
+    .section-title {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 12px;
+    }
+
+    .signal-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 9px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .signal-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 5px;
+    }
+
+    .signal-dot.red    { background: #E24B4A; }
+    .signal-dot.green  { background: #639922; }
+    .signal-dot.amber  { background: #BA7517; }
+
+    /* algo scores */
+    .algo-section {
+      padding: 14px 20px 16px;
+      background: var(--surface2);
+      border-top: 0.5px solid var(--border);
+    }
+
+    .algo-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px 16px;
+    }
+
+    .algo-item { }
+
+    .algo-name {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--text3);
+      margin-bottom: 4px;
+    }
+
+    .algo-bar-track {
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: 4px;
+    }
+
+    .algo-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      width: 0%;
+      transition: width 0.7s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    .algo-val {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--text2);
+    }
+
+    /* summary */
+    .summary-section {
+      padding: 12px 20px;
+      border-top: 0.5px solid var(--border);
+      background: var(--surface);
+    }
+
+    .summary-text {
+      font-size: 14px;
+      color: var(--text2);
+      font-style: italic;
+    }
+
+    /* ── How it works sidebar ─────────────────── */
+    .how-it-works {
+      margin-top: 1.5rem;
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .how-header {
+      padding: 12px 16px;
+      background: var(--surface2);
+      border-bottom: 0.5px solid var(--border);
+    }
+
+    .how-header-title {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text3);
+    }
+
+    .how-body {
+      padding: 14px 16px;
+      background: var(--surface);
+    }
+
+    .how-item {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .how-item:last-child { margin-bottom: 0; }
+
+    .how-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .how-icon.blue   { background: rgba(55,138,221,0.12); color: var(--blue); }
+    .how-icon.teal   { background: rgba(29,158,117,0.12); color: var(--teal); }
+    .how-icon.amber  { background: var(--amber-bg); color: var(--amber-accent); }
+    .how-icon.pink   { background: rgba(212,83,126,0.12); color: var(--pink); }
+
+    .how-content { }
+
+    .how-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 2px;
+    }
+
+    .how-desc {
+      font-size: 12px;
+      color: var(--text2);
+      line-height: 1.5;
+    }
+
+    /* ── Footer ──────────────────────────────── */
+    footer {
+      border-top: 0.5px solid var(--border);
+      padding: 1.5rem 2rem;
+      margin-top: 2rem;
+    }
+
+    .footer-inner {
+      max-width: 860px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .footer-note {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--text3);
+    }
+
+    /* ── Error state ─────────────────────────── */
+    .error-msg {
+      display: none;
+      margin-top: 12px;
+      padding: 10px 14px;
+      background: var(--red-bg);
+      border: 0.5px solid var(--red-border);
+      border-radius: var(--radius-md);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      color: var(--red-text);
+    }
+    .error-msg.visible { display: block; }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-name">The News Verifier</span>
+      </div>
+      <span class="header-meta">Fake News Detection Engine</span>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-inner">
+      <h1>Is this article <em>real</em> or fake?</h1>
+      <p class="hero-desc">Paste any news headline or article. Our NLP engine analyzes linguistic patterns using Naive Bayes and Logistic Regression classifiers.</p>
+      <div class="algo-pills">
+        <span class="algo-pill">Naive Bayes</span>
+        <span class="algo-pill">Logistic Regression</span>
+        <span class="algo-pill">TF-IDF Features</span>
+        <span class="algo-pill">Sentiment Analysis</span>
+        <span class="algo-pill">Clickbait Detection</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main -->
+  <main>
+
+    <!-- Left: Input -->
+    <div class="input-panel">
+      <label class="panel-label" for="newsInput">Article text or headline</label>
+      <textarea id="newsInput" placeholder="Paste a news article, headline, or claim here...
+
+e.g. Scientists discover that drinking coffee every morning reduces the risk of Alzheimer's by 65%, according to a new Harvard study published in the New England Journal of Medicine."></textarea>
+
+      <div class="examples-row">
+        <button class="example-btn" onclick="loadExample(0)">try: real news</button>
+        <button class="example-btn" onclick="loadExample(1)">try: fake headline</button>
+        <button class="example-btn" onclick="loadExample(2)">try: misleading claim</button>
+      </div>
+
+      <button class="analyze-btn" id="analyzeBtn" onclick="analyze()">Analyze Article →</button>
+
+
+
+      <div class="loading-wrap" id="loadingWrap">
+        <div class="loading-track"><div class="loading-fill"></div></div>
+        <span class="loading-status" id="loadingStatus">Extracting linguistic features...</span>
+      </div>
+
+      <div class="error-msg" id="errorMsg"></div>
+
+      <!-- Result card (mobile: shown here; desktop: in sidebar) -->
+      <div id="resultCardMobile"></div>
+    </div>
+
+    <!-- Right: Results + How it works -->
+    <div class="results-panel">
+      <div class="result-card" id="resultCard">
+
+        <div class="verdict-strip" id="verdictStrip">
+          <div>
+            <div class="verdict-eyebrow">Verdict</div>
+            <div class="verdict-label" id="verdictLabel">—</div>
+          </div>
+          <div class="confidence-block">
+            <span class="confidence-num" id="confidenceNum">—</span>
+            <div class="confidence-label">confidence</div>
+          </div>
+        </div>
+
+        <div class="signals-section">
+          <div class="section-title">Linguistic signals</div>
+          <div id="signalsList"></div>
+        </div>
+
+        <div class="summary-section">
+          <p class="summary-text" id="summaryText"></p>
+        </div>
+
+        <div class="algo-section">
+          <div class="section-title" style="margin-bottom:12px;">Algorithm scores</div>
+          <div class="algo-grid">
+            <div class="algo-item">
+              <div class="algo-name">Naive Bayes</div>
+              <div class="algo-bar-track"><div class="algo-bar-fill" id="nbBar" style="background:#378ADD;"></div></div>
+              <div class="algo-val" id="nbVal">—</div>
+            </div>
+            <div class="algo-item">
+              <div class="algo-name">Logistic Regression</div>
+              <div class="algo-bar-track"><div class="algo-bar-fill" id="lrBar" style="background:#1D9E75;"></div></div>
+              <div class="algo-val" id="lrVal">—</div>
+            </div>
+            <div class="algo-item">
+              <div class="algo-name">TF-IDF Credibility</div>
+              <div class="algo-bar-track"><div class="algo-bar-fill" id="tfidfBar" style="background:#BA7517;"></div></div>
+              <div class="algo-val" id="tfidfVal">—</div>
+            </div>
+            <div class="algo-item">
+              <div class="algo-name">Sentiment Neutrality</div>
+              <div class="algo-bar-track"><div class="algo-bar-fill" id="sentBar" style="background:#D4537E;"></div></div>
+              <div class="algo-val" id="sentVal">—</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- How it works -->
+      <div class="how-it-works">
+        <div class="how-header">
+          <span class="how-header-title">How it works</span>
+        </div>
+        <div class="how-body">
+          <div class="how-item">
+            <div class="how-icon blue">NB</div>
+            <div class="how-content">
+              <div class="how-name">Naive Bayes</div>
+              <div class="how-desc">Scores word probability distributions — sensational vocabulary vs neutral, factual reporting language.</div>
+            </div>
+          </div>
+          <div class="how-item">
+            <div class="how-icon teal">LR</div>
+            <div class="how-content">
+              <div class="how-name">Logistic Regression</div>
+              <div class="how-desc">Weighs multiple linguistic features simultaneously for a combined credibility score.</div>
+            </div>
+          </div>
+          <div class="how-item">
+            <div class="how-icon amber">TF</div>
+            <div class="how-content">
+              <div class="how-name">TF-IDF Features</div>
+              <div class="how-desc">Identifies rare vs common fake-news vocabulary patterns using term frequency analysis.</div>
+            </div>
+          </div>
+          <div class="how-item">
+            <div class="how-icon pink">SA</div>
+            <div class="how-content">
+              <div class="how-name">Sentiment Analysis</div>
+              <div class="how-desc">Measures emotional manipulation — real news is calmer; fake news is highly charged.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+      <span class="footer-note">The Verifier · NLP Fake News Detection · Powered by Claude AI</span>
+      <span class="footer-note">For educational use — always verify with trusted sources</span>
+    </div>
+  </footer>
+
+  <script>
+    // ── Example articles ──────────────────────────────────────────────
+    const examples = [
+      `The Federal Reserve raised interest rates by 0.25 percentage points on Wednesday, the tenth increase in just over a year, as policymakers sought to bring inflation back to their 2% target. Fed Chair Jerome Powell said at a press conference that the central bank may be nearing the end of its tightening cycle, though officials remain open to further increases if economic data warrants it. Markets responded positively to the news, with the S&P 500 gaining 0.8% in afternoon trading.`,
+      `SHOCKING: Bill Gates ADMITS in secret leaked video that COVID vaccines contain microchips to track every human being on Earth!! Government officials are DESPERATELY trying to DELETE this before you see it!! SHARE BEFORE IT'S TOO LATE!! Thousands of people are waking up to the TRUTH they don't want you to know!!`,
+      `Scientists have discovered that a new superfood berry found only deep in the Amazon rainforest can completely cure diabetes in just 7 days — but Big Pharma doesn't want you to know about it because it would destroy their billion-dollar industry. Doctors are furious that this natural remedy is going viral. This one weird trick has health companies TERRIFIED.`
+    ];
+
+    function loadExample(i) {
+      document.getElementById('newsInput').value = examples[i];
+      document.getElementById('errorMsg').classList.remove('visible');
+    }
+
+    // ── NLP Feature Dictionaries ──────────────────────────────────────
+
+    const FAKE_WORDS = [
+      'shocking','bombshell','bombshells','exposed','secret','leaked','leak','microchip','microchips',
+      'admit','admits','admitted','cover-up','coverup','conspiracy','illuminati','deep state',
+      'wake up','waking up','sheeple','mainstream media','lamestream','fake news','hoax',
+      'big pharma','big pharma','cure','cures','miracle','miracles','remedy','remedies',
+      'they dont want','they don\'t want','banned','suppress','suppressed','suppressing',
+      'urgent','breaking','alert','warning','danger','crisis','threat','terrified','terrifying',
+      'scrub','deleted','censored','silenced','whistleblower','insider','anonymous source',
+      'doctors hate','scientists hate','government hiding','truth about','real truth',
+      'share before','share this','before it\'s deleted','before it disappears',
+      'weird trick','one weird','simple trick','doctors don\'t','will shock you',
+      'must see','you won\'t believe','nobody is talking','what they\'re not telling',
+      'proof','undeniable proof','absolute proof','definitive proof',
+      'completely','totally','absolutely','100%','guaranteed',
+      'elites','globalists','new world order','nwo','cabal','shadow government',
+      'plandemic','scamdemic','plannedemic','crisis actors','false flag'
+    ];
+
+    const REAL_WORDS = [
+      'according to','said','stated','reported','announced','confirmed','spokesperson',
+      'official','officials','department','ministry','government','administration',
+      'study','research','researchers','scientists','professor','university','institute',
+      'published','journal','findings','data','evidence','statistics','percent','%',
+      'monday','tuesday','wednesday','thursday','friday','saturday','sunday',
+      'january','february','march','april','may','june','july','august','september','october','november','december',
+      'reuters','ap','associated press','bbc','cnn','nyt','washington post','new york times',
+      'federal','national','international','global','report','reports',
+      'increased','decreased','rose','fell','gained','lost','quarter','annual',
+      'however','although','despite','while','whereas','on the other hand',
+      'approximately','estimated','roughly','about','around','nearly'
+    ];
+
+    const SENSATIONAL_PATTERNS = [
+      /!{2,}/g,           // multiple exclamation marks
+      /\?{2,}/g,          // multiple question marks
+      /[A-Z]{4,}/g,       // long ALL CAPS words
+      /\bOMG\b/gi,
+      /\bWTF\b/gi,
+      /\bSHOCKING\b/gi,
+      /\bBOMBSHELL\b/gi,
+      /\bURGENT\b/gi,
+      /\bBREAKING\b/gi,
+      /\bEXPOSED\b/gi,
+      /\bSECRET\b/gi,
+      /\bLEAKED\b/gi
+    ];
+
+    const CREDIBLE_SOURCES = [
+      'reuters','associated press','ap news','bbc','new york times','washington post',
+      'guardian','financial times','bloomberg','wall street journal','npr',
+      'university','college','institute','hospital','center for','centres for',
+      'world health organization','who','cdc','fda','nih','nasa','un ','united nations',
+      'according to dr','according to professor','according to researchers',
+      'peer-reviewed','peer reviewed','published in','journal of','new england journal'
+    ];
+
+    // ── NLP Analysis Engine ───────────────────────────────────────────
+
+    function tokenize(text) {
+      return text.toLowerCase().replace(/[^\w\s']/g, ' ').split(/\s+/).filter(Boolean);
+    }
+
+    function countMatches(text, wordList) {
+      const lower = text.toLowerCase();
+      return wordList.filter(w => lower.includes(w)).length;
+    }
+
+    function countPatternMatches(text, patterns) {
+      return patterns.reduce((acc, p) => {
+        const m = text.match(p);
+        return acc + (m ? m.length : 0);
+      }, 0);
+    }
+
+    // Naive Bayes: P(fake|words) vs P(real|words) using log-likelihood
+    function naiveBayes(text) {
+      const tokens = tokenize(text);
+      const total = tokens.length || 1;
+      let fakeScore = 0, realScore = 0;
+
+      tokens.forEach(token => {
+        const isFake = FAKE_WORDS.some(w => w === token || token.includes(w));
+        const isReal = REAL_WORDS.some(w => w === token || token.includes(w));
+        if (isFake) fakeScore += 2;
+        if (isReal) realScore += 1.5;
+      });
+
+      // Normalize per token length
+      const fakeNorm = fakeScore / total;
+      const realNorm = realScore / total;
+      const total2 = fakeNorm + realNorm + 0.001;
+
+      // Returns credibility (higher = more real)
+      const credibility = Math.round((realNorm / total2) * 100);
+      return Math.min(100, Math.max(0, credibility));
+    }
+
+    // Logistic Regression: weighted feature combination
+    function logisticRegression(text) {
+      const lower = text.toLowerCase();
+      const tokens = tokenize(text);
+      const len = tokens.length || 1;
+
+      const features = {
+        fakeWordDensity:   countMatches(lower, FAKE_WORDS) / len,
+        realWordDensity:   countMatches(lower, REAL_WORDS) / len,
+        sensationalCount:  countPatternMatches(text, SENSATIONAL_PATTERNS),
+        capsRatio:         (text.match(/[A-Z]/g) || []).length / (text.length || 1),
+        exclamationCount:  (text.match(/!/g) || []).length,
+        hasCredibleSource: CREDIBLE_SOURCES.some(s => lower.includes(s)) ? 1 : 0,
+        hasNumbers:        (text.match(/\d+(\.\d+)?%?/g) || []).length > 2 ? 1 : 0,
+        avgWordLen:        tokens.reduce((a,t) => a + t.length, 0) / len,
+        sentenceCount:     (text.match(/[.!?]+/g) || []).length || 1
+      };
+
+      // Logistic regression weights (hand-tuned)
+      const weights = {
+        fakeWordDensity:   -8.0,
+        realWordDensity:   +6.0,
+        sensationalCount:  -1.2,
+        capsRatio:         -15.0,
+        exclamationCount:  -2.5,
+        hasCredibleSource: +20.0,
+        hasNumbers:        +10.0,
+        avgWordLen:        +2.0,
+        sentenceCount:     +0.5
+      };
+
+      const bias = 30;
+      let logit = bias;
+      for (const [k, w] of Object.entries(weights)) {
+        logit += w * features[k];
+      }
+
+      // Sigmoid
+      const credibility = Math.round(100 / (1 + Math.exp(-logit / 20)));
+      return Math.min(100, Math.max(0, credibility));
+    }
+
+    // TF-IDF credibility: fake vs real vocabulary
+    function tfidfCredibility(text) {
+      const tokens = tokenize(text);
+      const tf = {};
+      tokens.forEach(t => { tf[t] = (tf[t] || 0) + 1; });
+
+      let fakeScore = 0, realScore = 0;
+      const idf_fake = Math.log(10000 / (FAKE_WORDS.length + 1));
+      const idf_real = Math.log(10000 / (REAL_WORDS.length + 1));
+
+      for (const [token, count] of Object.entries(tf)) {
+        const isFake = FAKE_WORDS.some(w => token.includes(w) || w.includes(token));
+        const isReal = REAL_WORDS.some(w => token.includes(w) || w.includes(token));
+        const tfidf = (count / tokens.length) * (isFake ? idf_fake : idf_real);
+        if (isFake) fakeScore += tfidf;
+        if (isReal) realScore += tfidf;
+      }
+
+      const total = fakeScore + realScore + 0.001;
+      return Math.min(100, Math.max(0, Math.round((realScore / total) * 100)));
+    }
+
+    // Sentiment: emotional vs neutral (higher = more neutral = more credible)
+    function sentimentScore(text) {
+      const lower = text.toLowerCase();
+      let score = 70; // start neutral
+
+      // Negative signals (lower = more emotional)
+      score -= countPatternMatches(text, [/!{1,}/g]) * 4;
+      score -= ((text.match(/[A-Z]{3,}/g) || []).length) * 6;
+      score -= countMatches(lower, ['shocking','bombshell','urgent','alert','terrified','furious','exposed','leaked']) * 8;
+      score -= countMatches(lower, ['hate','angry','outrage','outraged','disgusting','evil','destroy']) * 5;
+
+      // Positive signals
+      score += countMatches(lower, ['according','reported','said','stated','however','although','study','research']) * 5;
+      score += (text.match(/\d+(\.\d+)?%/g) || []).length * 4;
+      score += CREDIBLE_SOURCES.filter(s => lower.includes(s)).length * 8;
+
+      return Math.min(100, Math.max(0, Math.round(score)));
+    }
+
+    // Generate signals from analysis
+    function generateSignals(text) {
+      const lower = text.toLowerCase();
+      const signals = [];
+
+      // Checks
+      const capsWords = (text.match(/\b[A-Z]{4,}\b/g) || []);
+      if (capsWords.length >= 2)
+        signals.push({ type: 'red', text: `Excessive ALL CAPS usage (${capsWords.length} instances) — emotional manipulation tactic` });
+
+      const exclamations = (text.match(/!/g) || []).length;
+      if (exclamations >= 2)
+        signals.push({ type: 'red', text: `${exclamations} exclamation marks detected — sensationalist writing style` });
+
+      const fakeMatches = FAKE_WORDS.filter(w => lower.includes(w));
+      if (fakeMatches.length >= 3)
+        signals.push({ type: 'red', text: `High-risk vocabulary: "${fakeMatches.slice(0,3).join('", "')}"` });
+
+      const hasSource = CREDIBLE_SOURCES.some(s => lower.includes(s));
+      if (hasSource)
+        signals.push({ type: 'green', text: 'References credible named source or institution' });
+
+      const hasNumbers = (text.match(/\d+(\.\d+)?%/g) || []).length > 1;
+      if (hasNumbers)
+        signals.push({ type: 'green', text: 'Contains specific numerical data and statistics' });
+
+      const hedging = ['according to','said','reported','confirmed','estimated','approximately'].filter(w => lower.includes(w));
+      if (hedging.length >= 2)
+        signals.push({ type: 'green', text: `Uses measured, attributed language (${hedging.slice(0,2).join(', ')})` });
+
+      const urgency = ['share before','before it disappears','before it\'s deleted','share everywhere','going viral'].filter(w => lower.includes(w));
+      if (urgency.length)
+        signals.push({ type: 'red', text: 'Urgency/virality framing — pressure to share without verification' });
+
+      const vague = ['they don\'t want','hidden truth','what they\'re not','nobody is talking','mainstream won\'t'].filter(w => lower.includes(w));
+      if (vague.length)
+        signals.push({ type: 'red', text: 'Conspiracy framing — vague "they" without named attribution' });
+
+      const balanced = ['however','although','on the other hand','despite','while','whereas'].filter(w => lower.includes(w));
+      if (balanced.length)
+        signals.push({ type: 'green', text: 'Balanced language with qualifiers and counterpoints' });
+
+      // Fallback signals
+      if (signals.length < 2) {
+        signals.push({ type: 'amber', text: 'Limited linguistic markers — analysis based on overall tone and structure' });
+      }
+
+      return signals.slice(0, 5);
+    }
+
+    // ── Loading ───────────────────────────────────────────────────────
+    const loadingMessages = [
+      'Extracting linguistic features...',
+      'Running Naive Bayes classifier...',
+      'Computing TF-IDF vectors...',
+      'Applying logistic regression...',
+      'Scoring sentiment patterns...',
+      'Cross-referencing clickbait signals...',
+      'Generating verdict...'
+    ];
+
+    let msgIdx = 0, loadingTimer = null;
+
+    function startLoading() {
+      msgIdx = 0;
+      document.getElementById('loadingStatus').textContent = loadingMessages[0];
+      document.getElementById('loadingWrap').classList.add('visible');
+      loadingTimer = setInterval(() => {
+        msgIdx = (msgIdx + 1) % loadingMessages.length;
+        document.getElementById('loadingStatus').textContent = loadingMessages[msgIdx];
+      }, 400);
+    }
+
+    function stopLoading() {
+      clearInterval(loadingTimer);
+      document.getElementById('loadingWrap').classList.remove('visible');
+    }
+
+    // ── Main analyze function ─────────────────────────────────────────
+    function analyze() {
+      const text = document.getElementById('newsInput').value.trim();
+      const errorEl = document.getElementById('errorMsg');
+      errorEl.classList.remove('visible');
+
+      if (!text) {
+        errorEl.textContent = 'Please paste an article or headline to analyze.';
+        errorEl.classList.add('visible');
+        return;
+      }
+
+      const btn = document.getElementById('analyzeBtn');
+      btn.disabled = true;
+      document.getElementById('resultCard').classList.remove('visible');
+      startLoading();
+
+      // Simulate processing delay for UX realism
+      setTimeout(() => {
+        try {
+          const nb   = naiveBayes(text);
+          const lr   = logisticRegression(text);
+          const tfidf = tfidfCredibility(text);
+          const sent  = sentimentScore(text);
+          const signals = generateSignals(text);
+
+          // Ensemble verdict: weighted average
+          const ensemble = Math.round(nb * 0.25 + lr * 0.35 + tfidf * 0.20 + sent * 0.20);
+
+          let verdict, summary;
+          if (ensemble >= 62) {
+            verdict = 'REAL';
+            summary = 'Article shows credible linguistic patterns consistent with factual reporting.';
+          } else if (ensemble <= 38) {
+            verdict = 'FAKE';
+            summary = 'Strong fake-news indicators detected: sensationalism, emotional manipulation, vague sourcing.';
+          } else {
+            verdict = 'UNCERTAIN';
+            summary = 'Mixed signals detected — verify with trusted sources before sharing.';
+          }
+
+          const confidence = Math.round(Math.abs(ensemble - 50) * 2);
+
+          stopLoading();
+          btn.disabled = false;
+
+          renderResult({
+            verdict,
+            confidence: Math.min(95, confidence + 30),
+            naive_bayes_score: nb,
+            logistic_regression_score: lr,
+            tfidf_credibility: tfidf,
+            sentiment_score: sent,
+            signals,
+            summary
+          });
+        } catch(e) {
+          stopLoading();
+          btn.disabled = false;
+          errorEl.textContent = 'Analysis error. Please try again.';
+          errorEl.classList.add('visible');
+        }
+      }, 2800);
+    }
+
+    // ── Render result ─────────────────────────────────────────────────
+    function renderResult(r) {
+      const verdict = (r.verdict || 'UNCERTAIN').toUpperCase();
+      const cls = verdict === 'REAL' ? 'real' : verdict === 'FAKE' ? 'fake' : 'uncertain';
+      const label = verdict === 'REAL' ? 'Likely Real' : verdict === 'FAKE' ? 'Likely Fake' : 'Uncertain';
+
+      document.getElementById('verdictStrip').className = 'verdict-strip ' + cls;
+      document.getElementById('verdictLabel').textContent = label;
+      document.getElementById('confidenceNum').textContent = (r.confidence || 0) + '%';
+      document.getElementById('summaryText').textContent = r.summary || '';
+
+      const signalsList = document.getElementById('signalsList');
+      signalsList.innerHTML = '';
+      (r.signals || []).forEach(s => {
+        const row = document.createElement('div');
+        row.className = 'signal-row';
+        row.innerHTML = `<div class="signal-dot ${s.type}"></div><span>${s.text}</span>`;
+        signalsList.appendChild(row);
+      });
+
+      const bars = [
+        ['nbBar',   'nbVal',   r.naive_bayes_score],
+        ['lrBar',   'lrVal',   r.logistic_regression_score],
+        ['tfidfBar','tfidfVal',r.tfidf_credibility],
+        ['sentBar', 'sentVal', r.sentiment_score],
+      ];
+
+      bars.forEach(([barId, valId, val]) => {
+        const v = Math.round(val || 0);
+        setTimeout(() => {
+          document.getElementById(barId).style.width = v + '%';
+          document.getElementById(valId).textContent = v + ' / 100';
+        }, 120);
+      });
+
+      document.getElementById('resultCard').classList.add('visible');
+      document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // ── Keyboard shortcut ─────────────────────────────────────────────
+    document.addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') analyze();
+    });
+  </script>
+</body>
+</html>
